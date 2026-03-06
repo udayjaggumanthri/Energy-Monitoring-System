@@ -49,6 +49,11 @@ const MQTTRegisterDevice: React.FC = () => {
   // Loading state
   const [loading, setLoading] = useState(false);
 
+  const handleHardwareAddressChange = (value: string) => {
+    setHardwareAddress(value);
+    setDeviceErrors(prev => ({ ...prev, hardwareAddress: '' }));
+  };
+
   const validateMQTTConfig = (): boolean => {
     const errors: Record<string, string> = {};
     
@@ -56,7 +61,7 @@ const MQTTRegisterDevice: React.FC = () => {
       errors.mqtt_broker_host = 'MQTT Broker Host is required';
     }
     if (!mqttConfig.mqtt_topic_prefix?.trim()) {
-      errors.mqtt_topic_prefix = 'MQTT Topic Prefix is required';
+      errors.mqtt_topic_prefix = 'MQTT Topic (full path) is required';
     }
     if (mqttConfig.mqtt_broker_port < 1 || mqttConfig.mqtt_broker_port > 65535) {
       errors.mqtt_broker_port = 'Port must be between 1 and 65535';
@@ -71,8 +76,6 @@ const MQTTRegisterDevice: React.FC = () => {
     
     if (!hardwareAddress.trim()) {
       errors.hardwareAddress = 'Hardware address is required';
-    } else if (!/^\d{5}$/.test(hardwareAddress.trim())) {
-      errors.hardwareAddress = 'Hardware address must be exactly 5 digits';
     }
     
     if (!deviceName.trim()) {
@@ -216,18 +219,13 @@ const MQTTRegisterDevice: React.FC = () => {
                   <div>
                     <label htmlFor="hardwareAddress" className="block text-sm font-semibold text-slate-700 mb-2">
                       <Hash className="h-4 w-4 inline mr-1" />
-                      Hardware Address (5 digits) *
+                      Hardware Address *
                     </label>
                     <Input
                       id="hardwareAddress"
                       value={hardwareAddress}
-                      onChange={(e) => {
-                        setHardwareAddress(e.target.value);
-                        setDeviceErrors({ ...deviceErrors, hardwareAddress: '' });
-                      }}
-                      placeholder="e.g. 46542"
-                      maxLength={5}
-                      pattern="\d{5}"
+                      onChange={(e) => handleHardwareAddressChange(e.target.value)}
+                      placeholder="e.g. 46542 or device-id-01"
                       className={`h-11 ${deviceErrors.hardwareAddress ? 'border-red-500' : ''}`}
                       required
                     />
@@ -313,7 +311,7 @@ const MQTTRegisterDevice: React.FC = () => {
                   <h4 className="text-sm font-semibold text-blue-800 mb-2">Review Summary</h4>
                   <div className="text-sm text-blue-700 space-y-1">
                     <p><strong>Broker:</strong> {mqttConfig.mqtt_broker_host}:{mqttConfig.mqtt_broker_port}</p>
-                    <p><strong>Topic Prefix:</strong> {mqttConfig.mqtt_topic_prefix}</p>
+                    <p><strong>MQTT Topic:</strong> {mqttConfig.mqtt_topic_prefix}</p>
                     <p><strong>Hardware Address:</strong> {hardwareAddress || 'Not set'}</p>
                     <p><strong>Parameter Keys Mapped:</strong> {Object.keys(fieldMappings).length} / {testResult?.all_parameter_keys.length || 0}</p>
                   </div>

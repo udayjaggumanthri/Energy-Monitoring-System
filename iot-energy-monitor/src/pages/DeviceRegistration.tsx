@@ -112,18 +112,10 @@ const DeviceRegistration: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Device Registration</h1>
             <p className="text-slate-600">
-              Register new IoT devices using their 5-digit hardware address
+              Register new IoT devices using their MQTT 
             </p>
           </div>
           <div className="flex items-center space-x-3">
-            <Button 
-              onClick={() => navigate('/devices/register')}
-              variant="outline"
-              className="border-slate-300"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Register Manually
-            </Button>
             <Button 
               onClick={() => navigate('/devices/register-mqtt')}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
@@ -141,10 +133,11 @@ const DeviceRegistration: React.FC = () => {
           <CardContent className="p-12 text-center">
             <Zap className="h-16 w-16 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600 text-lg font-medium mb-2">No devices registered</p>
-            <p className="text-slate-500 text-sm mb-4">Register your first device with a 5-digit hardware address and name. You can add Area, Building, and Floor for grouping.</p>
-            <Button variant="outline" onClick={() => navigate('/help')} className="border-slate-300">
-              How to use this app
-            </Button>
+            {user?.role === 'super_admin' && (
+              <Button variant="outline" onClick={() => navigate('/help')} className="border-slate-300">
+                How to use this app
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

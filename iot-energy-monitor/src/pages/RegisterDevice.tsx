@@ -25,8 +25,8 @@ const RegisterDevice: React.FC = () => {
     setFieldError('');
     const trimmedHw = hardwareAddress.trim();
     const trimmedName = name.trim();
-    if (!/^\d{5}$/.test(trimmedHw)) {
-      setFieldError('Hardware address must be exactly 5 digits (e.g. 46542).');
+    if (!trimmedHw) {
+      setFieldError('Hardware address is required.');
       return;
     }
     if (!trimmedName) {
@@ -81,7 +81,7 @@ const RegisterDevice: React.FC = () => {
             </nav>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Register New Device</h1>
             <p className="text-slate-600">
-              Add a new IoT device using its 5-digit hardware address. You can optionally set Area, Building, and Floor for grouping.
+              Add a new IoT device using its hardware address (any format). You can optionally set Area, Building, and Floor for grouping.
             </p>
           </div>
         </div>
@@ -101,20 +101,18 @@ const RegisterDevice: React.FC = () => {
               <div>
                 <label htmlFor="hardwareAddress" className="block text-sm font-semibold text-slate-700 mb-2">
                   <Hash className="h-4 w-4 inline mr-1" />
-                  Hardware Address (5 digits) *
+                  Hardware Address *
                 </label>
                 <Input
                   id="hardwareAddress"
                   value={hardwareAddress}
                   onChange={(e) => { setHardwareAddress(e.target.value); setFieldError(''); }}
-                  placeholder="e.g. 46542 (exactly 5 digits)"
-                  maxLength={5}
-                  pattern="\d{5}"
+                  placeholder="e.g. 46542 or device-id-01"
                   className={`h-11 ${fieldError ? 'border-red-500' : ''}`}
                   required
                 />
                 {fieldError && <p className="mt-1 text-sm text-red-600" role="alert">{fieldError}</p>}
-                <p className="text-xs text-slate-500 mt-1">Exactly 5 digits from your device</p>
+                <p className="text-xs text-slate-500 mt-1">Unique identifier from your device (letters, numbers, symbols allowed)</p>
               </div>
               <div>
                 <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">

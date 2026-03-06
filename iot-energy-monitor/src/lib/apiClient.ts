@@ -189,6 +189,13 @@ class ApiClient {
     });
   }
 
+  async postForm<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
   async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PUT',

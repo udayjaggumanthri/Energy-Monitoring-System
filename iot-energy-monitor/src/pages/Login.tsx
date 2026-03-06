@@ -7,7 +7,8 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { brandingService } from '../lib/api';
-import { Zap, Lock, Mail, Shield } from 'lucide-react';
+import { Lock, Mail, Shield } from 'lucide-react';
+import defaultLogo from '../logo with pf.png';
 
 const Login: React.FC = () => {
   const [emailOrMobile, setEmailOrMobile] = useState('');
@@ -18,7 +19,7 @@ const Login: React.FC = () => {
   const { setUser } = useApp();
   const navigate = useNavigate();
   const toast = useToast();
-  const [branding, setBranding] = React.useState({ logo: '', title: 'IoT Energy Monitoring System' });
+  const [branding, setBranding] = React.useState({ logo: '', title: 'IoT Monitoring System' });
 
   React.useEffect(() => {
     brandingService.getBranding().then(setBranding).catch(() => {});
@@ -81,17 +82,19 @@ const Login: React.FC = () => {
           <CardHeader className="text-center pb-8 pt-8">
             <div className="flex flex-col items-center space-y-4">
               {branding.logo ? (
-                <img src={branding.logo} alt="Logo" className="h-20 w-auto mb-2" />
+                <img
+                  src={branding.logo}
+                  alt="Logo"
+                  className="h-[130px] w-[160px] mb-2 object-contain"
+                />
               ) : (
-                <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg mb-2">
-                  <Zap className="h-12 w-12 text-white" />
-                </div>
+                <img
+                  src={defaultLogo}
+                  alt="Logo"
+                  className="h-[130px] w-[160px] mb-2 object-contain"
+                />
               )}
               <CardTitle className="text-2xl font-bold text-slate-900">{branding.title}</CardTitle>
-              <p className="text-sm text-slate-600 flex items-center space-x-1">
-                <Shield className="h-4 w-4" />
-                <span>Enterprise Energy Monitoring Platform</span>
-              </p>
             </div>
           </CardHeader>
           <CardContent className="px-8 pb-8">

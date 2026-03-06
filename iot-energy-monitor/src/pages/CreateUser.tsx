@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { userService } from '../lib/api';
+import { userService, whiteLabelService, WhiteLabel } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -26,10 +26,17 @@ const CreateUser: React.FC = () => {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [role, setRole] = useState<'admin' | 'user'>('user');
+  const [whiteLabels, setWhiteLabels] = useState<WhiteLabel[]>([]);
+  const [whiteLabelId, setWhiteLabelId] = useState<number | ''>('');
 
   const allowedRoles: ('admin' | 'user')[] = currentUser?.role === 'super_admin' 
     ? ['admin', 'user'] 
     : ['user'];
+
+  React.useEffect(() => {
+    if (currentUser?.role !== 'super_admin') return;
+    whiteLabelService.list().then(setWhiteLabels).catch(() => {});
+  }, [currentUser?.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +69,11 @@ const CreateUser: React.FC = () => {
       setLoading(false);
       return;
     }
+    if (currentUser?.role === 'super_admin' && role === 'admin' && !whiteLabelId) {
+      setFieldErrors((p) => ({ ...p, white_label_id: 'Select a white-label configuration for this admin.' }));
+      setLoading(false);
+      return;
+    }
 
     try {
       await userService.createUser({
@@ -73,6 +85,9 @@ const CreateUser: React.FC = () => {
         role,
         first_name: firstName.trim() || undefined,
         last_name: lastName.trim() || undefined,
+        ...(currentUser?.role === 'super_admin' && role === 'admin' && whiteLabelId
+          ? { white_label_id: Number(whiteLabelId) }
+          : {}),
       });
 
       toast.success('User created successfully. They can now sign in.');
@@ -84,6 +99,7 @@ const CreateUser: React.FC = () => {
       setPassword('');
       setPasswordConfirm('');
       setRole('user');
+      setWhiteLabelId('');
       setTimeout(() => navigate('/users'), 1500);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create user. Please try again.';
@@ -173,7 +189,7 @@ const CreateUser: React.FC = () => {
                 <select
                   id="role"
                   value={role}
-                  onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
+                  onChange={(e) => { setRole(e.target.value as 'admin' | 'user'); setFieldErrors((p) => ({ ...p, white_label_id: undefined })); }}
                   className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   required
                 >
@@ -190,6 +206,36 @@ const CreateUser: React.FC = () => {
                 </p>
               </div>
             </div>
+
+            {currentUser?.role === 'super_admin' && role === 'admin' && (
+              <div>
+                <label htmlFor="whiteLabel" className="block text-sm font-semibold text-slate-700 mb-2">
+                  White-label *
+                </label>
+                <select
+                  id="whiteLabel"
+                  value={whiteLabelId}
+                  onChange={(e) => setWhiteLabelId(e.target.value ? Number(e.target.value) : '')}
+                  className={`flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${
+                    fieldErrors.white_label_id ? 'border-red-500' : ''
+                  }`}
+                  required
+                >
+                  <option value="">Select a company branding</option>
+                  {whiteLabels.map((wl) => (
+                    <option key={wl.id} value={wl.id}>
+                      {wl.name} — {wl.title}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.white_label_id && (
+                  <p className="mt-1 text-sm text-red-600" role="alert">{fieldErrors.white_label_id}</p>
+                )}
+                <p className="text-xs text-slate-500 mt-1">
+                  This admin (and users they create) will see the selected logo/title.
+                </p>
+              </div>
+            )}
 
             {/* Name Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

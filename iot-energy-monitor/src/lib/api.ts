@@ -130,7 +130,7 @@ export interface MQTTTestResult {
   error?: string;
 }
 
-const FALLBACK_BRANDING = { logo: '', title: 'IoT Energy Monitoring System' };
+const FALLBACK_BRANDING = { logo: '', title: 'IoT Monitoring System' };
 
 // Authentication Service - Django DRF Integration
 export const authService = {
@@ -481,7 +481,7 @@ export const mqttService = {
         mqtt_broker_host: mqttConfig.mqtt_broker_host,
         mqtt_broker_port: mqttConfig.mqtt_broker_port,
         mqtt_topic_prefix: mqttConfig.mqtt_topic_prefix,
-        mqtt_topic_pattern: mqttConfig.mqtt_topic_pattern || `${mqttConfig.mqtt_topic_prefix}/${hardwareAddress}`,
+        mqtt_topic_pattern: mqttConfig.mqtt_topic_pattern || mqttConfig.mqtt_topic_prefix,
         mqtt_username: mqttConfig.mqtt_username || null,
         mqtt_password: mqttConfig.mqtt_password || null,
         mqtt_use_tls: mqttConfig.mqtt_use_tls || false,
@@ -778,6 +778,16 @@ export interface BrandingResponse {
   logo_url: string;
 }
 
+export interface WhiteLabel {
+  id: number;
+  name: string;
+  title: string;
+  logo_url: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const brandingService = {
   getBranding: async (): Promise<{ logo: string; title: string }> => {
     const response = await apiClient.get<BrandingResponse>('/branding/');
@@ -802,6 +812,48 @@ export const brandingService = {
       title: response.data.title || FALLBACK_BRANDING.title,
       logo: response.data.logo_url || '',
     };
+  },
+};
+
+export const whiteLabelService = {
+  list: async (): Promise<WhiteLabel[]> => {
+    const response = await apiClient.get<WhiteLabel[]>('/branding/whitelabels/');
+    if (response.error || !response.data) {
+      throw new Error(response.error || 'Failed to fetch white-labels');
+    }
+    return response.data;
+  },
+
+  create: async (payload: { name: string; title: string; logo?: File | null }): Promise<WhiteLabel> => {
+    const formData = new FormData();
+    formData.append('name', payload.name);
+    formData.append('title', payload.title);
+    if (payload.logo instanceof File) formData.append('logo', payload.logo);
+    const response = await apiClient.postForm<WhiteLabel>('/branding/whitelabels/', formData);
+    if (response.error || !response.data) {
+      throw new Error(response.error || 'Failed to create white-label');
+    }
+    return response.data;
+  },
+
+  update: async (id: number, payload: { name?: string; title?: string; logo?: File | null; is_active?: boolean }): Promise<WhiteLabel> => {
+    const formData = new FormData();
+    if (payload.name !== undefined) formData.append('name', payload.name);
+    if (payload.title !== undefined) formData.append('title', payload.title);
+    if (payload.is_active !== undefined) formData.append('is_active', String(payload.is_active));
+    if (payload.logo instanceof File) formData.append('logo', payload.logo);
+    const response = await apiClient.patchForm<WhiteLabel>(`/branding/whitelabels/${id}/`, formData);
+    if (response.error || !response.data) {
+      throw new Error(response.error || 'Failed to update white-label');
+    }
+    return response.data;
+  },
+
+  remove: async (id: number): Promise<void> => {
+    const response = await apiClient.delete<unknown>(`/branding/whitelabels/${id}/`);
+    if (response.error) {
+      throw new Error(response.error || 'Failed to delete white-label');
+    }
   },
 };
 
@@ -852,6 +904,7 @@ export const userService = {
     role: 'admin' | 'user';
     first_name?: string;
     last_name?: string;
+    white_label_id?: number;
   }): Promise<User> => {
     const response = await apiClient.post<{
       message: string;

@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import check_password
+from django.db.models import Q
 from .models import User
 from .serializers import (
     UserSerializer, 
@@ -63,6 +64,55 @@ def api_root(request):
             'user': 'Can view parameter mappings'
         }
     })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    """
+    Function-based login endpoint.
+    This avoids any issues with GenericAPIView routing and makes the
+    /api/auth/login/ endpoint respond reliably for POST requests.
+    """
+    serializer = LoginSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    email_or_mobile = serializer.validated_data['email_or_mobile']
+    password = serializer.validated_data['password']
+
+    # Try to find user by email, mobile, or username
+    user = None
+    for field in ['email', 'mobile', 'username']:
+        try:
+            user = User.objects.get(**{field: email_or_mobile})
+            break
+        except User.DoesNotExist:
+            continue
+
+    if user is None or not user.check_password(password):
+        return Response(
+            {'error': 'Invalid email/mobile or password'},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    if not user.is_active:
+        return Response(
+            {'error': 'User account is disabled'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    refresh = RefreshToken.for_user(user)
+    return Response(
+        {
+            'message': 'Login successful',
+            'user': UserSerializer(user).data,
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 class LoginView(generics.GenericAPIView):
@@ -177,7 +227,33 @@ class RegisterView(generics.CreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Enforce tenant / white-label inheritance rules
+        requested_role = serializer.validated_data.get('role', 'user')
+        white_label_id = serializer.validated_data.get('white_label_id') if isinstance(serializer.validated_data, dict) else None
+
+        # Admin can only create Users under their own white-label (ignore any passed id)
+        if request.user.has_role('admin'):
+            white_label_id = None
+        # Super Admin creating an Admin must choose a white-label
+        if request.user.has_role('super_admin') and requested_role == 'admin' and not white_label_id:
+            return Response(
+                {
+                    'error': 'white_label_required',
+                    'message': 'Select a white-label configuration when creating an Admin.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user = serializer.save()
+        # Track who created this user so that Admins only see their own users
+        if request.user.is_authenticated:
+            user.created_by = request.user
+            # If creator is Admin, inherit white-label from creator
+            if request.user.has_role('admin'):
+                user.white_label = request.user.white_label
+                user.save(update_fields=['created_by', 'white_label'])
+            else:
+                user.save(update_fields=['created_by'])
         
         # Generate JWT tokens for the newly created user
         refresh = RefreshToken.for_user(user)
@@ -204,9 +280,13 @@ class UserListView(generics.ListAPIView):
         # Super Admin sees all users
         if user.has_role('super_admin'):
             return User.objects.all()
-        # Admin sees all except Super Admins
+        # Admin sees only:
+        #  - themselves
+        #  - users they created (typically role='user')
         if user.has_role('admin'):
-            return User.objects.exclude(role='super_admin')
+            return User.objects.filter(
+                Q(id=user.id) | Q(created_by=user)
+            ).exclude(role='super_admin')
         # Regular users can only see themselves
         return User.objects.filter(id=user.id)
 
@@ -234,9 +314,13 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         if user.has_role('super_admin'):
             return target_user
 
-        # Admin can access users except Super Admins
+        # Admin can access:
+        #  - themselves
+        #  - users they created
         if user.has_role('admin'):
             if target_user.has_role('super_admin'):
+                self.permission_denied(self.request)
+            if target_user.id != user.id and target_user.created_by_id != user.id:
                 self.permission_denied(self.request)
             return target_user
 

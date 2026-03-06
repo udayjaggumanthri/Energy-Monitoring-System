@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { brandingService } from '../lib/api';
+import { whiteLabelService, WhiteLabel } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import { Upload, Palette, Image, Type, CheckCircle2, Eye } from 'lucide-react';
+import { Upload, Palette, Image, Type, CheckCircle2, Eye, Building2, Trash2, Plus } from 'lucide-react';
 
 const WhiteLabeling: React.FC = () => {
   const toast = useToast();
+  const [whiteLabels, setWhiteLabels] = useState<WhiteLabel[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [logo, setLogo] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -15,14 +18,18 @@ const WhiteLabeling: React.FC = () => {
   const [saved, setSaved] = useState(false);
 
   React.useEffect(() => {
-    brandingService.getBranding()
-      .then(branding => {
-        setTitle(branding.title);
-        setLogo(branding.logo);
+    whiteLabelService.list()
+      .then((items) => {
+        setWhiteLabels(items);
+        if (items.length > 0) {
+          setSelectedId(items[0].id);
+          setName(items[0].name);
+          setTitle(items[0].title);
+          setLogo(items[0].logo_url || '');
+        }
       })
       .catch(() => {
-        setTitle('IoT Energy Monitoring System');
-        setLogo('');
+        setWhiteLabels([]);
       });
   }, []);
 
@@ -38,26 +45,79 @@ const WhiteLabeling: React.FC = () => {
     }
   };
 
+  const selectWhiteLabel = (wl: WhiteLabel) => {
+    setSelectedId(wl.id);
+    setName(wl.name);
+    setTitle(wl.title);
+    setLogo(wl.logo_url || '');
+    setLogoFile(null);
+    setSaved(false);
+  };
+
+  const startNew = () => {
+    setSelectedId(null);
+    setName('');
+    setTitle('');
+    setLogo('');
+    setLogoFile(null);
+    setSaved(false);
+  };
+
   const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('White-label name is required.');
+      return;
+    }
     if (!title.trim()) {
-      toast.error('System title is required.');
+      toast.error('Dashboard title is required.');
       return;
     }
     setLoading(true);
     setSaved(false);
     try {
-      const updated = await brandingService.updateBranding({
-        title: title.trim(),
-        logo: logoFile || undefined,
-      });
-      setTitle(updated.title);
-      setLogo(updated.logo);
-      setLogoFile(null);
+      if (selectedId) {
+        const updated = await whiteLabelService.update(selectedId, {
+          name: name.trim(),
+          title: title.trim(),
+          logo: logoFile,
+        });
+        setWhiteLabels((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+        selectWhiteLabel(updated);
+      } else {
+        const created = await whiteLabelService.create({
+          name: name.trim(),
+          title: title.trim(),
+          logo: logoFile,
+        });
+        setWhiteLabels((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+        selectWhiteLabel(created);
+      }
       setSaved(true);
-      toast.success('Branding saved. Logo and title will appear in the sidebar and login page.');
+      toast.success('White-label saved. Assign it to an Admin during user creation.');
       setTimeout(() => setSaved(false), 3000);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to save branding';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedId) return;
+    setLoading(true);
+    try {
+      await whiteLabelService.remove(selectedId);
+      const remaining = whiteLabels.filter((x) => x.id !== selectedId);
+      setWhiteLabels(remaining);
+      if (remaining.length > 0) {
+        selectWhiteLabel(remaining[0]);
+      } else {
+        startNew();
+      }
+      toast.success('White-label deleted.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to delete white-label';
       toast.error(message);
     } finally {
       setLoading(false);
@@ -81,30 +141,96 @@ const WhiteLabeling: React.FC = () => {
         </div>
       </div>
 
+      {/* White-label list */}
+      <Card className="border border-slate-200 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b">
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              <span>Company White-Labels</span>
+            </span>
+            <Button variant="outline" onClick={startNew} className="border-slate-300">
+              <Plus className="h-4 w-4 mr-2" />
+              New
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4">
+          {whiteLabels.length === 0 ? (
+            <p className="text-sm text-slate-600">No white-label configurations yet. Create one using “New”.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {whiteLabels.map((wl) => (
+                <button
+                  key={wl.id}
+                  type="button"
+                  onClick={() => selectWhiteLabel(wl)}
+                  className={`text-left rounded-lg border p-4 transition-colors ${
+                    wl.id === selectedId ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden">
+                      {wl.logo_url ? (
+                        <img src={wl.logo_url} alt="Logo" className="h-10 w-10 object-contain" />
+                      ) : (
+                        <Palette className="h-5 w-5 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{wl.name}</p>
+                      <p className="text-xs text-slate-600 truncate">{wl.title}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Branding Configuration */}
       <Card className="border border-slate-200 shadow-sm">
         <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b">
           <CardTitle className="flex items-center space-x-2">
             <Palette className="h-5 w-5 text-purple-600" />
-            <span>Branding Configuration</span>
+            <span>{selectedId ? 'Edit White-Label' : 'Create White-Label'}</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
           <div>
+            <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
+              <Building2 className="h-4 w-4 inline mr-1" />
+              Company Name *
+            </label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Acme Power Ltd"
+              className="h-11"
+              required
+            />
+            <p className="text-xs text-slate-500 mt-2">
+              Used to identify this configuration in Admin creation.
+            </p>
+          </div>
+
+          <div>
             <label htmlFor="title" className="block text-sm font-semibold text-slate-700 mb-2">
               <Type className="h-4 w-4 inline mr-1" />
-              System Title *
+              Dashboard Title *
             </label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="IoT Energy Monitoring System"
+              placeholder="IoT Monitoring System"
               className="h-11"
               required
             />
             <p className="text-xs text-slate-500 mt-2">
-              This title will appear across the entire application in headers and navigation
+              This title will appear for the assigned admin and their users.
             </p>
           </div>
 
@@ -145,11 +271,22 @@ const WhiteLabeling: React.FC = () => {
           <div className="flex items-center space-x-3 pt-4 border-t">
             <Button 
               onClick={handleSave} 
-              disabled={loading || !title}
+              disabled={loading || !title || !name}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
             >
               {loading ? 'Saving...' : 'Save Branding'}
             </Button>
+            {selectedId && (
+              <Button
+                variant="outline"
+                onClick={handleDelete}
+                disabled={loading}
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
             {saved && (
               <div className="flex items-center space-x-2 text-green-600">
                 <CheckCircle2 className="h-5 w-5" />
@@ -187,7 +324,7 @@ const WhiteLabeling: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-slate-500 mt-4 text-center">
-            This preview shows how your branding will appear in the application header
+            This preview shows how branding will appear for the assigned company users
           </p>
         </CardContent>
       </Card>

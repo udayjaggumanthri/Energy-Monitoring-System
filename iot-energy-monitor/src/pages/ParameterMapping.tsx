@@ -126,6 +126,26 @@ const ParameterMapping: React.FC = () => {
         </Card>
       )}
 
+      {/* Partial mapping warning – informational only */}
+      {mappings.length > 0 && mappings.length < 5 && !error && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-3 text-amber-900">
+              <AlertCircle className="h-5 w-5 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold">
+                  You have mapped only a few parameters ({mappings.length} configured).
+                </p>
+                <p className="mt-1">
+                  It is okay to proceed with partial mapping, but any unmapped parameters will appear using their raw
+                  JSON keys on the Dashboard and in Reports. You can come back at any time to add more mappings.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Mappings Card */}
       <Card className="border border-slate-200 shadow-sm">
         <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b">

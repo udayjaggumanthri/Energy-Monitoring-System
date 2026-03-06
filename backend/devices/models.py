@@ -1,23 +1,16 @@
 from django.db import models
-from django.core.validators import RegexValidator
 from accounts.models import User
 
 
 class Device(models.Model):
     """
     Device Model - Represents IoT energy monitoring devices
-    Hardware Address: 5-digit unique identifier (e.g., 465421)
+    Hardware Address: unique identifier (alphanumeric/special chars, no format restriction)
     """
-    hardware_address_validator = RegexValidator(
-        regex=r'^\d{5}$',
-        message='Hardware address must be exactly 5 digits'
-    )
-    
     hardware_address = models.CharField(
-        max_length=5,
-        validators=[hardware_address_validator],
+        max_length=255,
         unique=True,
-        help_text='5-digit hardware back-address (e.g., 465421)'
+        help_text='Unique hardware identifier (e.g. 46542, device-id-01, MAC, etc.)'
     )
     name = models.CharField(
         max_length=200,

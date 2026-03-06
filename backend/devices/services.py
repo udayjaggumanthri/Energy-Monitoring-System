@@ -156,8 +156,8 @@ def test_mqtt_connection(
         rc = getattr(reason_code, 'value', reason_code) if reason_code is not None else 0
         if rc == 0:
             connection_status = "connected"
-            # Subscribe to topic pattern: {prefix}/* or {prefix}/+
-            topic_pattern = f"{topic_prefix}/+" if topic_prefix else "+"
+            # Subscribe to full topic path: exact topic and all subtopics (e.g. topic/EM/ED5432 or topic/EM/ED5432/#)
+            topic_pattern = (topic_prefix.strip().rstrip('/') + '/#') if topic_prefix else '#'
             client.subscribe(topic_pattern)
             logger.info(f"Connected to MQTT broker and subscribed to {topic_pattern}")
         else:
@@ -180,24 +180,20 @@ def test_mqtt_connection(
                 logger.warning(f"Invalid JSON on {topic}: {e}")
                 parsed_payload = {}
             
-            # Extract hardware address from topic (e.g., EM/46521 -> 46521)
+            # Extract hardware address from topic (last segment) or payload (identification only)
             hardware_address = None
-            if topic_prefix:
-                parts = topic.split('/', 1)
-                if len(parts) > 1:
+            if topic:
+                parts = topic.split('/')
+                if parts:
                     potential_hw = parts[-1]
-                    if potential_hw.isdigit() and len(potential_hw) == 5:
+                    if potential_hw:
                         hardware_address = potential_hw
-            else:
-                # Try to extract from topic directly
-                if topic.isdigit() and len(topic) == 5:
-                    hardware_address = topic
             
             # Also check payload for hardware_address field
             if not hardware_address and isinstance(parsed_payload, dict):
                 hw_from_payload = parsed_payload.get('hardware_address') or parsed_payload.get('hw_addr')
-                if hw_from_payload and str(hw_from_payload).isdigit() and len(str(hw_from_payload)) == 5:
-                    hardware_address = str(hw_from_payload)
+                if hw_from_payload and str(hw_from_payload).strip():
+                    hardware_address = str(hw_from_payload).strip()
             
             # Extract parameter keys (numeric values only)
             parameter_keys = []

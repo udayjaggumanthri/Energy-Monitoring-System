@@ -89,13 +89,11 @@ class DeviceSerializer(serializers.ModelSerializer):
         return instance
 
     def validate_hardware_address(self, value):
-        if not value:
+        if not value or not str(value).strip():
             raise serializers.ValidationError('Hardware address is required.')
         raw = str(value).strip()
-        if not raw.isdigit() or len(raw) != 5:
-            raise serializers.ValidationError(
-                'Hardware address must be exactly 5 digits (e.g. 46542).'
-            )
+        if len(raw) > 255:
+            raise serializers.ValidationError('Hardware address must be 255 characters or fewer.')
         return raw
 
     def validate_name(self, value):
@@ -165,7 +163,7 @@ class MQTTTestSerializer(serializers.Serializer):
 
 class MQTTDeviceRegistrationSerializer(serializers.Serializer):
     """Serializer for registering device from MQTT test results"""
-    hardware_address = serializers.CharField(max_length=5, required=True)
+    hardware_address = serializers.CharField(max_length=255, required=True)
     name = serializers.CharField(max_length=200, required=True)
     area = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     building = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
@@ -182,8 +180,8 @@ class MQTTDeviceRegistrationSerializer(serializers.Serializer):
         if not value or not str(value).strip():
             raise serializers.ValidationError('Hardware address is required.')
         raw = str(value).strip()
-        if not raw.isdigit() or len(raw) != 5:
-            raise serializers.ValidationError('Hardware address must be exactly 5 digits.')
+        if len(raw) > 255:
+            raise serializers.ValidationError('Hardware address must be 255 characters or fewer.')
         return raw
     
     def validate_name(self, value):

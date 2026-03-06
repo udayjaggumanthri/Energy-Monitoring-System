@@ -7,7 +7,6 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import DeviceRegistration from './pages/DeviceRegistration';
 import DeviceDetail from './pages/DeviceDetail';
-import RegisterDevice from './pages/RegisterDevice';
 import MQTTRegisterDevice from './pages/MQTTRegisterDevice';
 import ParameterMapping from './pages/ParameterMapping';
 import ThresholdSettings from './pages/ThresholdSettings';
@@ -78,9 +77,7 @@ function App() {
           <Route
             path="/devices/register"
             element={
-              <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
-                <RegisterDevice />
-              </ProtectedRoute>
+              <Navigate to="/devices" replace />
             }
           />
           <Route
@@ -158,7 +155,7 @@ function App() {
           <Route
             path="/help"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['super_admin']}>
                 <Help />
               </ProtectedRoute>
             }

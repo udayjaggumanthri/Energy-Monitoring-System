@@ -66,20 +66,20 @@ const MQTTConfigForm: React.FC<MQTTConfigFormProps> = ({ config, onChange, error
       <div>
         <label htmlFor="mqtt_topic_prefix" className="block text-sm font-semibold text-slate-700 mb-2">
           <Key className="h-4 w-4 inline mr-1" />
-          MQTT Topic Prefix *
+          MQTT Topic (full path) *
         </label>
         <Input
           id="mqtt_topic_prefix"
           value={config.mqtt_topic_prefix || ''}
           onChange={(e) => updateField('mqtt_topic_prefix', e.target.value)}
-          placeholder="e.g. EM, iot/devices"
+          placeholder="e.g. topic/EM/ED5432"
           className={`h-11 ${errors.mqtt_topic_prefix ? 'border-red-500' : ''}`}
           required
         />
         {errors.mqtt_topic_prefix && (
           <p className="mt-1 text-sm text-red-600" role="alert">{errors.mqtt_topic_prefix}</p>
         )}
-        <p className="text-xs text-slate-500 mt-1">Topic prefix (e.g., EM for EM/46521)</p>
+        <p className="text-xs text-slate-500 mt-1">Full topic path for this device. Hardware address is for identification only and is not appended to the topic.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

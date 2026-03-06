@@ -23,7 +23,7 @@ const MQTTTester: React.FC<MQTTTesterProps> = ({ config, onTestComplete }) => {
       return;
     }
     if (!config.mqtt_topic_prefix?.trim()) {
-      toast.error('MQTT Topic Prefix is required');
+      toast.error('MQTT Topic (full path) is required');
       return;
     }
 

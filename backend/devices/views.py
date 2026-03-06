@@ -376,7 +376,7 @@ class MQTTDeviceRegistrationView(APIView):
             mqtt_broker_host=mqtt_config['mqtt_broker_host'],
             mqtt_broker_port=mqtt_config['mqtt_broker_port'],
             mqtt_topic_prefix=mqtt_config['mqtt_topic_prefix'],
-            mqtt_topic_pattern=mqtt_config.get('mqtt_topic_pattern') or f"{mqtt_config['mqtt_topic_prefix']}/{hardware_address}",
+            mqtt_topic_pattern=mqtt_config.get('mqtt_topic_pattern') or mqtt_config['mqtt_topic_prefix'],
             mqtt_username=mqtt_config.get('mqtt_username'),
             mqtt_password=mqtt_config.get('mqtt_password'),  # Store as plain text (can be encrypted later if needed)
             mqtt_use_tls=mqtt_config.get('mqtt_use_tls', False),

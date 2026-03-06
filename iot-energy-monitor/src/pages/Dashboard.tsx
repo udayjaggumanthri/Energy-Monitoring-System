@@ -6,12 +6,14 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { format } from 'date-fns';
 import { AlertTriangle, Zap, Activity, Gauge, Waves, TrendingUp, MapPin, Clock, CheckCircle2, Search, ChevronRight } from 'lucide-react';
+import { brandingService } from '../lib/api';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { devices, parameterMapping, user, alarms } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [brandingTitle, setBrandingTitle] = useState('Energy Monitoring Dashboard');
 
   // Filter devices based on user role
   const visibleDevices = useMemo(() => {
@@ -65,14 +67,17 @@ const Dashboard: React.FC = () => {
       return new Date().getTime() - new Date(d.lastUpdate).getTime() < 10000;
     }).length;
     const totalAlarms = alarms.filter(a => !a.acknowledged).length;
-    const totalPower = visibleDevices.reduce((sum, d) => {
-      if (!d.parameters) return sum;
-      const power = d.parameters['tkW'] || d.parameters['tkw'] || d.parameters['total_kw'] || 0;
-      return sum + power;
-    }, 0);
 
-    return { totalDevices, onlineDevices, totalAlarms, totalPower };
+    return { totalDevices, onlineDevices, totalAlarms };
   }, [visibleDevices, alarms]);
+
+  React.useEffect(() => {
+    brandingService.getBranding()
+      .then((b) => {
+        setBrandingTitle(b.title || 'Energy Monitoring Dashboard');
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -80,7 +85,7 @@ const Dashboard: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Energy Monitoring Dashboard</h1>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">{brandingTitle}</h1>
             <p className="text-slate-600">
               Real-time monitoring and analytics for {visibleDevices.length} device{visibleDevices.length !== 1 ? 's' : ''}
             </p>
@@ -93,9 +98,9 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        <Card className="bg-gradient-to-br from-sky-500 via-sky-600 to-blue-600 text-white border-0 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl">
+          <CardContent className="p-5 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm font-medium mb-1">Total Devices</p>
@@ -108,8 +113,8 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
+        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl">
+          <CardContent className="p-5 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm font-medium mb-1">Online Devices</p>
@@ -122,8 +127,8 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
+        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl">
+          <CardContent className="p-5 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-red-100 text-sm font-medium mb-1">Active Alarms</p>
@@ -131,20 +136,6 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
                 <AlertTriangle className="h-6 w-6" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium mb-1">Total Power</p>
-                <p className="text-3xl font-bold">{stats.totalPower.toFixed(2)} kW</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -162,9 +153,11 @@ const Dashboard: React.FC = () => {
                 ? 'Register devices in the Devices page, or assign devices to users in User Management.'
                 : 'No devices are assigned to your account. Ask an admin to assign devices to you.'}
             </p>
-            <Button variant="outline" onClick={() => navigate('/help')} className="border-slate-300">
-              How to use this app
-            </Button>
+            {user?.role === 'super_admin' && (
+              <Button variant="outline" onClick={() => navigate('/help')} className="border-slate-300">
+                How to use this app
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

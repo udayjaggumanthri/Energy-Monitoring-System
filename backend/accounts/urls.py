@@ -4,7 +4,7 @@ from . import views
 
 urlpatterns = [
     # Authentication endpoints
-    path('login/', views.LoginView.as_view(), name='login'),
+    path('login/', views.login_view, name='login'),
     path('register/', views.RegisterView.as_view(), name='register'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
