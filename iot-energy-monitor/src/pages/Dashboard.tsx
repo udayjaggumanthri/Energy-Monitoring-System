@@ -18,11 +18,17 @@ const Dashboard: React.FC = () => {
   // Filter devices based on user role
   const visibleDevices = useMemo(() => {
     if (!user) return [];
-    if (user.role === 'super_admin' || user.role === 'admin') {
+    // Super Admin can see all devices on the Dashboard.
+    if (user.role === 'super_admin') {
       return devices;
     }
-    // Users see only assigned devices (handled by backend API)
-    return devices;
+    // Admin/User: show only devices assigned to them on the Dashboard.
+    // Backend may allow admins to view all devices for management pages, but the dashboard should be scoped.
+    const assignedIds = new Set<number>(user.assigned_device_ids || []);
+    return devices.filter(d => {
+      const deviceAssignedUserIds = d.assigned_user_ids || [];
+      return assignedIds.has(d.id) || deviceAssignedUserIds.includes(user.id);
+    });
   }, [devices, user]);
 
   // Filter devices by search query

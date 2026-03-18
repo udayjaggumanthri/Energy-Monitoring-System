@@ -110,17 +110,21 @@ class DeviceListSerializer(serializers.ModelSerializer):
         source='assigned_users.count',
         read_only=True
     )
+    assigned_user_ids = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Device
         fields = [
             'id', 'hardware_address', 'name', 'area', 'building', 'floor',
-            'is_active', 'assigned_users_count',
+            'is_active', 'assigned_users_count', 'assigned_user_ids',
             'mqtt_broker_host', 'mqtt_broker_port', 'mqtt_topic_prefix',
             'mqtt_topic_pattern', 'mqtt_username', 'mqtt_use_tls',
             'created_at', 'last_data_received'
         ]
         read_only_fields = ['id', 'created_at', 'last_data_received']
+
+    def get_assigned_user_ids(self, obj):
+        return [u.id for u in obj.assigned_users.all()]
 
 
 class MQTTConfigSerializer(serializers.Serializer):
